@@ -1,21 +1,20 @@
-from asyncio.tasks import Task, sleep
+# from asyncio.tasks import Task, sleep
 from datetime import datetime
 from asyncio import sleep
 from glob import glob
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-
 from discord import (
     Intents,
     Embed,
     File,
 )
-from discord.errors import Forbidden, HTTPException
 from discord.ext.commands import Bot as BotBase
-from discord.ext.commands import (
-    CommandNotFound, Context, BadArgument, MissingRequiredArgument)
-
+from discord.ext.commands import Context
+from discord.errors import Forbidden, HTTPException
+from discord.ext.commands.errors import (
+     MissingRequiredArgument, BadArgument, CommandNotFound, CommandError
+)
 from ..db import db
 from ..cogs.non_cog.CustomExceptiosn import *
 
@@ -110,7 +109,7 @@ class Bot(BotBase):
             else:
                 await ctx.send(str(exc.original))
 
-        if any([isinstance(exc, error) for error in IGNORE_EXCEPTIONS]):
+        elif any([isinstance(exc, error) for error in IGNORE_EXCEPTIONS]):
             pass
 
         elif isinstance(exc, MissingRequiredArgument):
@@ -122,9 +121,8 @@ class Bot(BotBase):
         elif isinstance(exc.original, Forbidden):
             await ctx.send("I do not have the premission to do that.")
 
-
         else:
-            raise exc
+            await ctx.send(exc)
 
 
     async def on_ready(self):

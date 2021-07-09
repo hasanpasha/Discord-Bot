@@ -1,11 +1,12 @@
 # from discord.embeds import Embed
 from os import initgroups
 from random import choice, randint
-from typing import Optional
-
-from discord import Member, Embed
+from typing import Optional, Text
+from aiohttp import request
+from discord import Member, Embed, embeds
 from discord.errors import HTTPException
 from discord.ext.commands import Cog, command, BadArgument, MissingRequiredArgument
+from discord.message import Message
 from .non_cog.CustomExceptiosn import *
 
 class Fun(Cog):
@@ -62,7 +63,151 @@ class Fun(Cog):
     async def echo_message(self, ctx, *, message):
         await ctx.message.delete()
         await ctx.send(message)
+    
+    # Used for api requests
+    async def get_data(self, URL):
+        async with request("GET", URL, headers={}) as resp:
+            if resp.status == 200:  # OK
+                return await resp.json()
+            else:
+                return resp.status
+   
+    @command(name='fact', aliases=['fact-about'])
+    async def animal_fact(self, ctx, animal: Optional[str]):
+        animals = ('dog', 'cat', 'panda', 'fox', 'bird', 'koala', )
+        get_data = self.get_data
+        async def send_fact(animal):
+            FACT_URL = f"https://some-random-api.ml/facts/{animal.lower()}"
+            IMAGE_URL = f"https://some-random-api.ml/img/{animal.lower()}"
+            # if data := await get_data(FACT_URL):
+            fact_data = await get_data(FACT_URL)
+            if isinstance(fact_data, dict):
+                embed = Embed(
+                    title=f"{animal.title()} fact",
+                    description=fact_data['fact'],
+                    colour=ctx.author.colour
+                )
 
+                image_data = await get_data(IMAGE_URL)
+                if isinstance(image_data, dict):
+                    image_url = image_data['link']
+                    embed.set_image(url=image_url)
+
+                await ctx.send(embed=embed)
+            
+            else:
+                await ctx.send(f"API returned a {fact_data} status.")
+                return
+            
+        if animal:
+            if animal.lower() in animals:
+                await send_fact(animal.lower())
+            else:
+                await ctx.send("No facts are available for this animal.")
+
+        else:
+            await send_fact(choice(animals))
+        
+    @animal_fact.error
+    async def animal_fact_error(self, ctx, exc):
+        if hasattr(exc, "original"):
+            await ctx.send(exc.original)
+        else:
+            await ctx.send(exc)
+
+    @command(name='meme', aliases=['mem', 'memes'])
+    async def get_memes(self, ctx):
+        URL = "https://some-random-api.ml/meme"
+        get_data = self.get_data
+        data = await get_data(URL)
+        if isinstance(data, dict):
+            embed = Embed(
+                title=data['caption'],
+            )
+            embed.set_image(url=data['image'])
+            await ctx.send(embed=embed)
+
+        else:
+            await ctx.send(f"API returned a {data} status.")
+            return
+
+    @command(name='lyrics', aliases=['lyric', 'words'])
+    async def get_lyrics(self, ctx, *, name):
+        suffix = '+'.join(name.split())
+        URL = f"https://some-random-api.ml/lyrics?title={suffix}"
+        # print()
+        get_data = self.get_data
+        data = await get_data(URL)
+        if isinstance(data, dict):
+            embed = Embed(
+                title=data['title'],
+            )
+            fields = [
+                ('author', data['author'], True),
+                # ('lyrics', data['lyrics'], False)
+            ]
+            for name, value, inline in fields:
+                embed.add_field(name=name, value=value, inline=inline)
+            embed.set_image(url=data['thumbnail']['genius'])
+
+            if len(data['lyrics']) > 4000:
+                lyrics = data['lyrics'].split('\n')
+                previous = -1
+                for i in range(30, len(lyrics), 30):
+                    if (len(lyrics) - i) < 30:
+                        await ctx.send(' '.join(lyrics[previous + 1:]))
+                    else:
+                        # print('sending')
+                        await ctx.send(' '.join(lyrics[previous + 1:i]))
+                        previous = i
+                    
+                await ctx.send(embed=embed)
+            # await ctx.send(data['lyrics'], embed=embed)
+
+        else:
+            await ctx.send(f"API returned a {data} status.")
+            return
+        
+    @get_lyrics.error
+    async def get_lyrics_error(self, ctx, exc):
+        if isinstance(exc, MissingRequiredArgument):
+            await ctx.send("Song name is missing.")
+
+    @command(name='anime', aliases=['anim', 'animu'])
+    async def get_anime_quote(self, ctx, cate: Optional[str]):
+        if cate in ('wink', 'pat', 'hug', 'face-palm'):
+            URL = f"https://some-random-api.ml/animu/{cate}"
+            get_data = self.get_data
+            data = await get_data(URL)
+            if isinstance(data, dict):
+                embed = Embed()
+                embed.set_image(url=data['link'])
+                # delete_after =
+                await ctx.send(embed=embed)
+
+            else:
+                await ctx.send(f"API returned a {data} status.")
+                return
+
+        else:
+            URL = "https://some-random-api.ml/animu/quote"
+            get_data = self.get_data
+            data = await get_data(URL)
+            if isinstance(data, dict):
+                embed = Embed(
+                    title=data['characther'].title(),
+                    description=data['sentence'],
+                    colour=ctx.author.colour
+                )
+                embed.set_footer(text=data['anime'].title())
+
+                # text = f"\"{data['sentence']}\" -{data['characther'].title()}, {data['anime'].title()}"
+                # await ctx.send(text)
+                await ctx.send(embed=embed)
+
+            else:
+                await ctx.send(f"API returned a {data} status.")
+                return
 
     @Cog.listener()
     async def on_ready(self):
