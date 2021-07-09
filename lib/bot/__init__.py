@@ -11,17 +11,21 @@ from discord import (
     Embed,
     File,
 )
+from discord.errors import Forbidden, HTTPException
 from discord.ext.commands import Bot as BotBase
-from discord.ext.commands import CommandNotFound, Context
+from discord.ext.commands import (
+    CommandNotFound, Context, BadArgument, MissingRequiredArgument)
 
 from ..db import db
+from ..cogs.non_cog.CustomExceptiosn import *
 
 PREFIX = "!"
 OWNER_IDS = [
     438073319900839986
 ]
 COGS = [path.split('/')[-1][:-3] for path in glob('./lib/cogs/*.py')]
-
+OR_IGNORE_EXCEPTIONS = (CommandNotFound, LargeNumberException)
+IGNORE_EXCEPTIONS = (BadArgument, Exception)
 
 class CogsReady(object):
     def __init__(self):
@@ -92,20 +96,32 @@ class Bot(BotBase):
 
     async def on_error(self, err, *args, **kwargs):
         if err == "on_command_error":
-            await args[0].send("Something went wrong.")
+            await args[0].send("Something went wrong with the command.")
 
         else:
-            # stdout_channel = self.get_channel(862940566370254868)
-            await self.stdout_channel.send("An error occured.")
-            raise
+            await self.stdout_channel.send(f"An error occured. [{err}]")
+            # raise
 
     async def on_command_error(self, ctx, exc):
-        if isinstance(exc, CommandNotFound):
-            # await ctx.send("Wrong command.")
+        if hasattr(exc, "original"):
+            if any([isinstance(exc.original, error) for error in OR_IGNORE_EXCEPTIONS]):
+                pass
+
+            else:
+                await ctx.send(str(exc.original))
+
+        if any([isinstance(exc, error) for error in IGNORE_EXCEPTIONS]):
             pass
 
-        elif hasattr(exc, "original"):
-            raise exc.original
+        elif isinstance(exc, MissingRequiredArgument):
+            await ctx.send("One or more required arguments are missing.")
+
+        elif isinstance(exc.original, HTTPException):
+            await ctx.send("Unable to send the message.")
+
+        elif isinstance(exc.original, Forbidden):
+            await ctx.send("I do not have the premission to do that.")
+
 
         else:
             raise exc
