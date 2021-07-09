@@ -9,14 +9,14 @@ from apscheduler.triggers.cron import CronTrigger
 from discord import (
     Intents,
     Embed,
-    File
+    File,
 )
 from discord.ext.commands import Bot as BotBase
-from discord.ext.commands import CommandNotFound
+from discord.ext.commands import CommandNotFound, Context
 
 from ..db import db
 
-PREFIX = "+"
+PREFIX = "!"
 OWNER_IDS = [
     438073319900839986
 ]
@@ -69,6 +69,16 @@ class Bot(BotBase):
         print("running bot...")
         super().run(self.TOKEN, reconnect=True)
 
+    async def process_commands(self, message):
+        ctx = await self.get_context(message, cls=Context)
+
+        if ctx.command is not None and ctx.guild is not None:
+            if self.ready:
+                await self.invoke(ctx)
+
+            else:
+                await ctx.send("I'm not ready to receive command, Please wait for a few seconds.")
+
     async def rules_reminder(self):
         # stdout_channel = self.get_channel(862940566370254868)
         await self.stdout_channel.send("Remember to adhere to the rules!")
@@ -103,12 +113,10 @@ class Bot(BotBase):
 
     async def on_ready(self):
         if not self.ready:
-
+            self.stdout_channel = self.get_channel(862940566370254868)
+            self.guild = self.get_guild(853338000368599102)
             self.scheduler.add_job(self.rules_reminder, CronTrigger(day_of_week=0, hour=12, minute=0, second=0))
             self.scheduler.start()
-
-            self.guild = self.get_guild(853338000368599102)
-            self.stdout_channel = self.get_channel(862940566370254868)
 
             # embed = Embed(
             #     title="Now Online!",
@@ -133,15 +141,17 @@ class Bot(BotBase):
             while not self.cogs_ready.all_ready:
                 await sleep(0.5)
 
-            await self.stdout_channel.send("Now Online!")
             self.ready = True
+            await self.stdout_channel.send("Now Online!")
             print("bot ready")
 
         else:
             print("bot reconnected")
 
     async def on_message(self, message):
-        pass
+        # if message.author.bot and message.author != message.guild.me:
+        if not message.author.bot:
+            await self.process_commands(message)
 
 
 bot = Bot()
