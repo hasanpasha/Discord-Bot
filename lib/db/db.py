@@ -1,8 +1,11 @@
 from os.path import isfile
 from sqlite3 import connect
+from apscheduler.triggers.cron import CronTrigger
 
-DB_PATH = "./data/db/database.db"
-BUILD_PATH = "./data/db/build.sql"
+DB_PATH = "./lib/db/data/db/database.db"
+BUILD_PATH = "./lib/db/data/db/build.sql"
+
+# print(isfile(BUILD_PATH))
 
 cxn = connect(DB_PATH, check_same_thread=False)
 cur = cxn.cursor()
@@ -10,7 +13,7 @@ cur = cxn.cursor()
 
 def with_commit(func):
     def inner(*args, **kwargs):
-        func(*args, **kwargs):
+        func(*args, **kwargs)
         commit()
 
     return inner
@@ -19,15 +22,22 @@ def with_commit(func):
 @with_commit
 def build():
     if isfile(BUILD_PATH):
-        scriptexec(BUILD_PATH)
+        if not isfile(DB_PATH):
+            print("Building database..")
+            scriptexec(BUILD_PATH)
 
 
 def commit():
+    print('commiting..')
     cxn.commit()
 
 def close():
     cxn.close()
 
+def autosave(sched):
+    print("auto_saving")
+    build()
+    sched.add_job(commit, CronTrigger(second=0))
 
 def field(command, *values):
     cur.execute(command, tuple(values))
