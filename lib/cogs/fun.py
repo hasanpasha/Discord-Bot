@@ -1,20 +1,71 @@
-# from discord.embeds import Embed
-from os import initgroups
 from random import choice, randint
-from typing import Optional, Text
+from typing import Optional
 from aiohttp import request
-from attr import attr
-from discord import Member, Embed
+from datetime import datetime
+from discord import Member, Embed, File
 from discord.errors import HTTPException
 from discord.ext.commands import (
-    Cog, command, BadArgument, MissingRequiredArgument, BucketType, cooldown) 
-# from discord.message import Message
-from .non_cog.CustomExceptiosn import *
+    Cog, command, BadArgument, BucketType, cooldown) 
+from lib.cogs.non_cog.custom_exceptiosn import *
+from lib.cogs.non_cog.utils import snowflakeToDate
 
 class Fun(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.special_values = {}
+
+    @command(name='server')
+    @cooldown(3, 60)
+    async def server_info(self, ctx):
+        embed = Embed(
+            title="Now Online!",
+            description="The server is now online",
+            colour=ctx.author.colour,
+            timestamp=datetime.utcnow()
+        )
+        # print(self.bot.owner_ids)
+        # if ids := self.bot.owner_ids:
+        #     member = Member(ids[0])
+        #     if member != None:
+        #         print(member.name)
+
+            # if user := self.bot.get_user(self.bot.owner_ids[0]) != None:
+            # user = self.
+        fields = [
+            ("Owner", f"Eren Yeager", True),
+            ("Members", f"{ctx.guild.member_count}", True),
+            ("Created on ", f"{snowflakeToDate(self.bot.guild.id)}", False)
+        ]   
+        for name, value, inline in fields:
+            embed.add_field(name=name, value=value, inline=inline)
+        embed.set_author(name="Demons Army", icon_url=self.bot.guild.icon_url)
+        embed.set_footer(text="We are the ARMY.")
+        embed.set_image(url=self.bot.guild.icon_url)
+        # embed.set_thumbnail(url=self.guild.icon_url)
+        await ctx.send(embed=embed)
+        # await self.bot.stdout_channel.send(file=File('./lib/db/data/images/avatar.png'))
+
+    @command(name='user')
+    async def user_info(self, ctx, member: Optional[Member]):
+        if not member:
+            member = ctx.author
+            
+        embed = Embed(
+            title=member.name,
+            # description=member.description,
+            colour=member.colour
+        )
+        fields = [
+            # ("id", f"{member.id}", True),
+            ("Nick name", f"{member.nick}", True),
+            ("Status", f"{member.status}", True),
+            ("Joined discord at", f"{member.created_at}", False),
+            ("Joined server at", f"{member.joined_at}", False),
+        ]
+        for name, value, inline in fields:
+            embed.add_field(name=name, value=value, inline=inline)
+        embed.set_thumbnail(url=member.avatar_url)
+        await ctx.send(embed=embed)
 
     @command(name='hi', aliases=['hey', 'hee'], hide=False, pass_context=True)
     @cooldown(5, 10, BucketType.user)

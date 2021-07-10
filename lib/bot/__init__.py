@@ -15,7 +15,7 @@ from discord.errors import Forbidden, HTTPException
 from discord.ext.commands.errors import (
      MissingRequiredArgument, BadArgument, CommandNotFound, CommandOnCooldown
 )
-from lib.cogs.non_cog.CustomExceptiosn import LargeNumberException
+from lib.cogs.non_cog import LargeNumberException
 from lib.db import db
 
 PREFIX = "!"
@@ -132,28 +132,9 @@ class Bot(BotBase):
         if not self.ready:
             self.stdout_channel = self.get_channel(862940566370254868)
             self.guild = self.get_guild(853338000368599102)
+
             self.scheduler.add_job(self.rules_reminder, CronTrigger(day_of_week=0, hour=12, minute=0, second=0))
             self.scheduler.start()
-
-            # embed = Embed(
-            #     title="Now Online!",
-            #     description="The server is now online",
-            #     colour=0xFF0000,
-            #     timestamp=datetime.utcnow()
-            # )
-            # fields = [
-            #     ("Owner", "Hasan Pasha", True),
-            #     ("Another field", "This field is next to each other", True),
-            #     ("A non-inline field", "This field will appear on it's own row.", False)
-            # ]
-            # for name, value, inline in fields:
-            #     embed.add_field(name=name, value=value, inline=inline)
-            # embed.set_author(name="Demons Army", icon_url=self.guild.icon_url)
-            # embed.set_footer(text="This is the footer.")
-            # embed.set_image(url=self.guild.icon_url)
-            # embed.set_thumbnail(url=self.guild.icon_url)
-            # await stdout_channel.send(embed=embed)
-            # await stdout_channel.send(file=File('./lib/db/data/images/avatar.png'))
 
             while not self.cogs_ready.all_ready:
                 await sleep(0.5)
