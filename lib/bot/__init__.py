@@ -13,18 +13,17 @@ from discord.ext.commands import Bot as BotBase
 from discord.ext.commands import Context
 from discord.errors import Forbidden, HTTPException
 from discord.ext.commands.errors import (
-     MissingRequiredArgument, BadArgument, CommandNotFound, CommandError
+     MissingRequiredArgument, BadArgument, CommandNotFound, CommandOnCooldown
 )
-from ..db import db
-from ..cogs.non_cog.CustomExceptiosn import *
+from lib.cogs.non_cog.CustomExceptiosn import LargeNumberException
+from lib.db import db
 
 PREFIX = "!"
 OWNER_IDS = [
     438073319900839986
 ]
 COGS = [path.split('/')[-1][:-3] for path in glob('./lib/cogs/*.py')]
-OR_IGNORE_EXCEPTIONS = (CommandNotFound, LargeNumberException)
-IGNORE_EXCEPTIONS = (BadArgument, Exception)
+IGNORE_EXCEPTIONS = (BadArgument, LargeNumberException, CommandNotFound)
 
 class CogsReady(object):
     def __init__(self):
@@ -96,6 +95,7 @@ class Bot(BotBase):
     async def on_error(self, err, *args, **kwargs):
         if err == "on_command_error":
             await args[0].send("Something went wrong with the command.")
+            # print(err)
 
         else:
             await self.stdout_channel.send(f"An error occured. [{err}]")
@@ -103,26 +103,29 @@ class Bot(BotBase):
 
     async def on_command_error(self, ctx, exc):
         if hasattr(exc, "original"):
-            if any([isinstance(exc.original, error) for error in OR_IGNORE_EXCEPTIONS]):
-                pass
+            if isinstance(exc.original, HTTPException):
+                await ctx.send("Unable to send the message.")
 
-            else:
-                await ctx.send(str(exc.original))
-
-        elif any([isinstance(exc, error) for error in IGNORE_EXCEPTIONS]):
-            pass
-
-        elif isinstance(exc, MissingRequiredArgument):
-            await ctx.send("One or more required arguments are missing.")
-
-        elif isinstance(exc.original, HTTPException):
-            await ctx.send("Unable to send the message.")
-
-        elif isinstance(exc.original, Forbidden):
-            await ctx.send("I do not have the premission to do that.")
+            elif isinstance(exc.original, Forbidden):
+                await ctx.send("I do not have the premission to do that.")
 
         else:
-            await ctx.send(exc)
+
+            if any([isinstance(exc, error) for error in IGNORE_EXCEPTIONS]):
+                pass
+
+            elif isinstance(exc, CommandOnCooldown):
+                await ctx.send(f"The command is on cooldown, Try again in {exc.retry_after:,.2f}", delete_after=exc.retry_after / 2)
+                # await ctx.delete()
+
+            elif isinstance(exc, MissingRequiredArgument):
+                await ctx.send("One or more required arguments are missing.")
+
+            # elif isinstance(exc, CommandNotFound):
+            #     await ctx.send("Command is not available.")
+
+            else:
+                await ctx.send(exc)
 
 
     async def on_ready(self):

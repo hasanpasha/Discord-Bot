@@ -3,10 +3,12 @@ from os import initgroups
 from random import choice, randint
 from typing import Optional, Text
 from aiohttp import request
-from discord import Member, Embed, embeds
+from attr import attr
+from discord import Member, Embed
 from discord.errors import HTTPException
-from discord.ext.commands import Cog, command, BadArgument, MissingRequiredArgument
-from discord.message import Message
+from discord.ext.commands import (
+    Cog, command, BadArgument, MissingRequiredArgument, BucketType, cooldown) 
+# from discord.message import Message
 from .non_cog.CustomExceptiosn import *
 
 class Fun(Cog):
@@ -15,37 +17,42 @@ class Fun(Cog):
         self.special_values = {}
 
     @command(name='hi', aliases=['hey', 'hee'], hide=False, pass_context=True)
+    @cooldown(5, 10, BucketType.user)
     async def say_hi_to_user(self, ctx, *args):
         await ctx.send(f"{choice(('hello', 'hey', 'hi', 'hee'))} {ctx.author.mention}")
 
     @command(name='dice', aliases=['roll'])
+    @cooldown(1, 30, BucketType.user)    # Every 1 time for 30 seconds
     async def roll_dice(self, ctx, dice_string: str):
-        dice, value = (int(term) for term in dice_string.split('d'))
+        if dice_string:
+            dice, value = (int(term) for term in dice_string.split('d'))
 
-        self.special_values['dice_limit'] = 500
-        self.special_values['value_limit'] = 100000000
+            self.special_values['dice_limit'] = 500
+            self.special_values['value_limit'] = 100000000
 
-        if dice > self.special_values['dice_limit'] or value > self.special_values['value_limit']:
-            raise LargeNumberException()
+            if dice > self.special_values['dice_limit'] or value > self.special_values['value_limit']:
+                raise LargeNumberException()
 
-        rolls = [randint(1, value) for i in range(dice)]
-        await ctx.send(" + ".join(str(r) for r in rolls) + f"= {sum(rolls)}")
+            rolls = [randint(1, value) for i in range(dice)]
+            print('sending')
+            await ctx.send(" + ".join(str(r) for r in rolls) + f"= {sum(rolls)}")
 
     # Handle errors 
     @roll_dice.error
     async def roll_dice_error(self, ctx, exc):
-        if isinstance(exc.original, HTTPException):
-            await ctx.send("Result is too large, Please try a lower number.")
+        if hasattr(exc, "original"):
+            if isinstance(exc.original, LargeNumberException):
+                embed_ = Embed(title="Limits")
+                fields = [
+                    ("dice", self.special_values['dice_limit'], True),
+                    ("value", self.special_values['value_limit'], True)
+                ]
+                for name, value, inline in fields:
+                    embed_.add_field(name=name, value=value, inline=inline)
+                await ctx.send("Numbers is too large, Please try a lower number.", embed=embed_)
 
-        elif isinstance(exc.original, LargeNumberException):
-            embed_ = Embed(title="Limits")
-            fields = [
-                ("dice", self.special_values['dice_limit'], True),
-                ("value", self.special_values['value_limit'], True)
-            ]
-            for name, value, inline in fields:
-                embed_.add_field(name=name, value=value, inline=inline)
-            await ctx.send("Numbers is too large, Please try a lower number.", embed=embed_)
+            elif isinstance(exc.original, HTTPException):
+                await ctx.send("Result is too large, Please try a lower number.")
 
     @command(name='slap', aliases=['hit'])
     async def slap_member(self, ctx, member: Member, *, reason: Optional[str] = "no reason"):
@@ -53,10 +60,10 @@ class Fun(Cog):
 
     @slap_member.error
     async def slap_member_error(self, ctx, exc):
-        if isinstance(exc, MissingRequiredArgument):
-            await ctx.send("One or more required arguments are missing.")
+        # if isinstance(exc, MissingRequiredArgument):
+        #     await ctx.send("One or more required arguments are missing.")
 
-        elif isinstance(exc, BadArgument):
+        if isinstance(exc, BadArgument):
             await ctx.send("I can't find the member.")
 
     @command(name='echo', aliases=['say'])
@@ -73,6 +80,7 @@ class Fun(Cog):
                 return resp.status
    
     @command(name='fact', aliases=['fact-about'])
+    @cooldown(1, 60, BucketType.user)
     async def animal_fact(self, ctx, animal: Optional[str]):
         animals = ('dog', 'cat', 'panda', 'fox', 'bird', 'koala', )
         get_data = self.get_data
@@ -108,14 +116,8 @@ class Fun(Cog):
         else:
             await send_fact(choice(animals))
         
-    @animal_fact.error
-    async def animal_fact_error(self, ctx, exc):
-        if hasattr(exc, "original"):
-            await ctx.send(exc.original)
-        else:
-            await ctx.send(exc)
-
     @command(name='meme', aliases=['mem', 'memes'])
+    @cooldown(1, 45, BucketType.user)
     async def get_memes(self, ctx):
         URL = "https://some-random-api.ml/meme"
         get_data = self.get_data
@@ -132,6 +134,7 @@ class Fun(Cog):
             return
 
     @command(name='lyrics', aliases=['lyric', 'words'])
+    @cooldown(1, 100, BucketType.user)   # Every 1 time for 100 seconds
     async def get_lyrics(self, ctx, *, name):
         suffix = '+'.join(name.split())
         URL = f"https://some-random-api.ml/lyrics?title={suffix}"
@@ -168,12 +171,13 @@ class Fun(Cog):
             await ctx.send(f"API returned a {data} status.")
             return
         
-    @get_lyrics.error
-    async def get_lyrics_error(self, ctx, exc):
-        if isinstance(exc, MissingRequiredArgument):
-            await ctx.send("Song name is missing.")
+    # @get_lyrics.error
+    # async def get_lyrics_error(self, ctx, exc):
+    #     if isinstance(exc, MissingRequiredArgument):
+    #         await ctx.send("Song name is missing.")
 
     @command(name='anime', aliases=['anim', 'animu'])
+    @cooldown(1, 30, BucketType.user)
     async def get_anime_quote(self, ctx, cate: Optional[str]):
         if cate in ('wink', 'pat', 'hug', 'face-palm'):
             URL = f"https://some-random-api.ml/animu/{cate}"
@@ -200,9 +204,6 @@ class Fun(Cog):
                     colour=ctx.author.colour
                 )
                 embed.set_footer(text=data['anime'].title())
-
-                # text = f"\"{data['sentence']}\" -{data['characther'].title()}, {data['anime'].title()}"
-                # await ctx.send(text)
                 await ctx.send(embed=embed)
 
             else:
@@ -214,8 +215,6 @@ class Fun(Cog):
         if not self.bot.ready:
             print('Setting fun cog ready..')
             self.bot.cogs_ready.ready_up('fun')
-        # await self.bot.stdout_channel.send("Fun cog is ready.")
-        # print('Fun cog ready')
 
     @Cog.listener()
     async def on_message(self, message):
