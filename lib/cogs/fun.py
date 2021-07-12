@@ -14,23 +14,16 @@ class Fun(Cog):
         self.bot = bot
         self.special_values = {}
 
-    @command(name='server')
-    @cooldown(3, 60)
+    @command(name='server', brief="Show information about the server")
+    @cooldown(3, 60, BucketType.user)
     async def server_info(self, ctx):
+        """Show information about the server"""
         embed = Embed(
             title="Now Online!",
             description="The server is now online",
             colour=ctx.author.colour,
             timestamp=datetime.utcnow()
         )
-        # print(self.bot.owner_ids)
-        # if ids := self.bot.owner_ids:
-        #     member = Member(ids[0])
-        #     if member != None:
-        #         print(member.name)
-
-            # if user := self.bot.get_user(self.bot.owner_ids[0]) != None:
-            # user = self.
         fields = [
             ("Owner", f"Eren Yeager", True),
             ("Members", f"{ctx.guild.member_count}", True),
@@ -45,8 +38,9 @@ class Fun(Cog):
         await ctx.send(embed=embed)
         # await self.bot.stdout_channel.send(file=File('./lib/db/data/images/avatar.png'))
 
-    @command(name='user')
+    @command(name='user', brief="Show information about the user")
     async def user_info(self, ctx, member: Optional[Member]):
+        """Show information about the user"""
         if not member:
             member = ctx.author
             
@@ -67,14 +61,16 @@ class Fun(Cog):
         embed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed=embed)
 
-    @command(name='hi', aliases=['hey', 'hee'], hide=False, pass_context=True)
+    @command(name='hi', aliases=['hey', 'hee'], hide=False, pass_context=True, brief="Say hi back to the user")
     @cooldown(5, 10, BucketType.user)
     async def say_hi_to_user(self, ctx, *args):
+        """Say hi back to the user"""
         await ctx.send(f"{choice(('hello', 'hey', 'hi', 'hee'))} {ctx.author.mention}")
 
-    @command(name='dice', aliases=['roll'])
+    @command(name='dice', aliases=['roll'], brief="Play roll game!")
     @cooldown(1, 30, BucketType.user)    # Every 1 time for 30 seconds
     async def roll_dice(self, ctx, dice_string: str):
+        """Play roll game!"""
         if dice_string:
             dice, value = (int(term) for term in dice_string.split('d'))
 
@@ -105,8 +101,9 @@ class Fun(Cog):
             elif isinstance(exc.original, HTTPException):
                 await ctx.send("Result is too large, Please try a lower number.")
 
-    @command(name='slap', aliases=['hit'])
+    @command(name='slap', aliases=['hit'], brief="Slap a user")
     async def slap_member(self, ctx, member: Member, *, reason: Optional[str] = "no reason"):
+        """Slap a user"""
         await ctx.send(f"{ctx.author.display_name} slapped {member.mention} for {reason}!")
 
     @slap_member.error
@@ -117,8 +114,9 @@ class Fun(Cog):
         if isinstance(exc, BadArgument):
             await ctx.send("I can't find the member.")
 
-    @command(name='echo', aliases=['say'])
+    @command(name='echo', aliases=['say'], brief="Let the bot repeat your nonsense")
     async def echo_message(self, ctx, *, message):
+        """Let the bot repeat your nonsense"""
         await ctx.message.delete()
         await ctx.send(message)
     
@@ -130,9 +128,10 @@ class Fun(Cog):
             else:
                 return resp.status
    
-    @command(name='fact', aliases=['fact-about'])
+    @command(name='fact', aliases=['fact-about'], brief="Show fact about animal beside pictues")
     @cooldown(1, 60, BucketType.user)
     async def animal_fact(self, ctx, animal: Optional[str]):
+        """Show fact about animal beside pictues"""
         animals = ('dog', 'cat', 'panda', 'fox', 'bird', 'koala', )
         get_data = self.get_data
         async def send_fact(animal):
@@ -167,9 +166,10 @@ class Fun(Cog):
         else:
             await send_fact(choice(animals))
         
-    @command(name='meme', aliases=['mem', 'memes'])
+    @command(name='meme', aliases=['mem', 'memes'], brief="Show memes")
     @cooldown(1, 45, BucketType.user)
     async def get_memes(self, ctx):
+        """Show memes"""
         URL = "https://some-random-api.ml/meme"
         get_data = self.get_data
         data = await get_data(URL)
@@ -184,9 +184,10 @@ class Fun(Cog):
             await ctx.send(f"API returned a {data} status.")
             return
 
-    @command(name='lyrics', aliases=['lyric', 'words'])
+    @command(name='lyrics', aliases=['lyric', 'words'], brief="Get song lyrics")
     @cooldown(1, 100, BucketType.user)   # Every 1 time for 100 seconds
     async def get_lyrics(self, ctx, *, name):
+        """Get song lyrics"""
         suffix = '+'.join(name.split())
         URL = f"https://some-random-api.ml/lyrics?title={suffix}"
         # print()
@@ -227,9 +228,10 @@ class Fun(Cog):
     #     if isinstance(exc, MissingRequiredArgument):
     #         await ctx.send("Song name is missing.")
 
-    @command(name='anime', aliases=['anim', 'animu'])
+    @command(name='anime', aliases=['anim', 'animu'], brief="Get anime quote or anime picture")
     @cooldown(1, 30, BucketType.user)
     async def get_anime_quote(self, ctx, cate: Optional[str]):
+        """Get anime quote or anime picture"""
         if cate in ('wink', 'pat', 'hug', 'face-palm'):
             URL = f"https://some-random-api.ml/animu/{cate}"
             get_data = self.get_data

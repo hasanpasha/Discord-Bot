@@ -54,6 +54,7 @@ class Bot(BotBase):
             Intents=Intents.all()
         )
     
+        self.commands
     def setup(self):
         for cog in COGS:
             self.load_extension(f'lib.cogs.{cog}')
