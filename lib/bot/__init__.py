@@ -10,7 +10,7 @@ from discord import (
     File,
 )
 from discord.ext.commands import Bot as BotBase
-from discord.ext.commands import Context
+from discord.ext.commands import Context, when_mentioned_or
 from discord.errors import Forbidden, HTTPException
 from discord.ext.commands.errors import (
      MissingRequiredArgument, BadArgument, CommandNotFound, CommandOnCooldown
@@ -24,6 +24,13 @@ OWNER_IDS = [
 ]
 COGS = [path.split('/')[-1][:-3] for path in glob('./lib/cogs/*.py')]
 IGNORE_EXCEPTIONS = (BadArgument, LargeNumberException, CommandNotFound)
+
+
+def get_prefix(bot, message):
+    prefix = db.field("SELECT Prefix FROM guilds WHERE GuildID = ?", message.guild.id)
+    return when_mentioned_or(prefix)(bot, message)
+
+
 
 class CogsReady(object):
     def __init__(self):
@@ -49,7 +56,7 @@ class Bot(BotBase):
         db.autosave(self.scheduler)
 
         super().__init__(
-            command_prefix=PREFIX,
+            command_prefix=get_prefix,
             owner_ids=OWNER_IDS,
             Intents=Intents.all()
         )

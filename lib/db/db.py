@@ -22,9 +22,9 @@ def with_commit(func):
 @with_commit
 def build():
     if isfile(BUILD_PATH):
-        if not isfile(DB_PATH):
-            print("Building database..")
-            scriptexec(BUILD_PATH)
+        # if not isfile(DB_PATH):
+        print("Building database..")
+        scriptexec(BUILD_PATH)
 
 
 def commit():
